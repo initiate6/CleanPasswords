@@ -86,7 +86,7 @@ def eat_queue(job_queue, result_queue, sRegex, eRegex, outFile):
 		break
 	    else:
 		result_queue.put(cleanIt(piece, sRegex, eRegex, outFile ))
-	result_queue.put(None)
+	result_queue.put('STOP')
 
 def put_tasks(job_queue, f, lines, threads):
 	#Feeds the job queue
@@ -112,17 +112,19 @@ def run(f, threads, outFile, lines, sRegex, eRegex):
 		workers_list.append(tmp)
 
 	for worker in workers_list:
-		print("Start worker %s") % worker
+		print("Start worker %s") % worker.name
 		worker.start()
 
 	count = 0
 	while count < threads:
-		if result_queue.get() is None:
+		if result_queue.get() == 'STOP':
 			count += 1
 
 	for worker in workers_list:
 		worker.join()
 		print("worker %s finished!") % worker.name 
+
+	f.close()
 
 
 def main(argv):
@@ -147,7 +149,7 @@ def main(argv):
 		elif opt in ("-o", "--output"):
 			outFile = arg
 		elif opt in ("-l", "--lines"):
-			lines = int(arg)
+			lines = arg
 		elif opt in ("-s", "--startRegex"):
 			startRegex = arg
 		elif opt in ("-e", "--endRegex"):
@@ -167,9 +169,9 @@ def main(argv):
 		if not lines:
 			lines = 10000
 		if not startRegex:
-			startRegex = '^[\d|\W]+'
+			startRegex = "^[\d|\W]+"
 		if not endRegex:
-			endRegex = '[\d|\W]+$'
+			endRegex = "[\d|\W]+$"
 		if not threads:
 			threads = mp.cpu_count()
 
@@ -184,8 +186,7 @@ def main(argv):
 	except Exception as e:
 		print("Error when trying to set regex compile: %s") % e
 
-	print("Running with config: Input File: %s, Threads: %s, Lines: %s, startRegex: %s, endRegex: %s\n") % (inFile, threads, outFile, lines, sRegex, eRegex)
-	run(f, threads, outFile, lines, sRegex, eRegex)
+	run(f, int(threads), outFile, int(lines), sRegex, eRegex)
 	
 
 if __name__ == "__main__":
